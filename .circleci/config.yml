@@ -48,12 +48,16 @@ jobs:
             sudo apt-get install software-properties-common
             echo 3333
             sudo dpkg --add-architecture i386
-            echo 4444
-            echo -ne '\n' | sudo add-apt-repository ppa:jonathonf/wine
             echo 5555
+            wget -nc https://dl.winehq.org/wine-builds/winehq.key
+            echo 66666
+            sudo apt-key add winehq.key
+            echo 7777
+            deb https://dl.winehq.org/wine-builds/debian/ jessie main
+            echo qqqqqq
             sudo apt update
             echo 8888
-            sudo apt install wine-stable
+            sudo apt install --install-recommends winehq-stable
             echo 99999
 
       - run:
