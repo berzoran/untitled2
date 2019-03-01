@@ -49,15 +49,11 @@ jobs:
             echo 3333
             sudo dpkg --add-architecture i386
             echo 4444
-            wget -nc https://dl.winehq.org/wine-builds/winehq.key
+            sudo add-apt-repository ppa:jonathonf/wine
             echo 5555
-            sudo apt-key add winehq.key
-            echo 66666
-            sudo apt-add-repository 'deb https://dl.winehq.org/wine-builds/ubuntu/ trusty main'
-            echo 77777
-            sudo apt-get update
+            sudo apt update
             echo 8888
-            sudo apt install --install-recommends winehq-stable
+            sudo apt install wine-stable
             echo 99999
 
       - run:
