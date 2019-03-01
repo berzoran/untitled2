@@ -39,7 +39,8 @@ jobs:
       - run:
           name: install packages
           command: |
-            sudo apt install mono-devel
+            sudo apt-get install mono-devel
+            sudo apt-get --fix-missing
             sudo apt-get install software-properties-common
             sudo dpkg --add-architecture i386
             wget -nc https://dl.winehq.org/wine-builds/winehq.key
@@ -68,4 +69,3 @@ jobs:
             BUILD_WIN=desktop_win_${CIRCLE_BRANCH}_${CURRENT_DATE}_${CIRCLE_BUILD_NUM}
             aws s3 cp ${macDMG} s3://clarity-cm/product_builds/${BUILD_MAC}.dmg
             aws s3 cp ${winEXE} s3://clarity-cm/product_builds/${BUILD_WIN}.exe
-
