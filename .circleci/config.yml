@@ -51,7 +51,7 @@ jobs:
             echo 5555555
             sudo apt-key add winehq.key
             echo 6666666
-            sudo apt-add-repository 'deb https://dl.winehq.org/wine-builds/ubuntu/ main'
+            sudo apt-add-repository 'deb https://dl.winehq.org/wine-builds/ubuntu/ trusty main'
             echo 777777
             sudo tytyt
             sudo apt-get update
