@@ -47,14 +47,12 @@ jobs:
             echo 2222
             sudo apt-get install software-properties-common
             echo 3333
-            wget https://dl.winehq.org/wine-builds/Release.key
-            echo 4444
-            sudo apt-key add Release.key
-            echo  5555
-            sudo apt-add-repository 'https://dl.winehq.org/wine-builds/ubuntu/'
+            sudo add-apt-repository ppa:ubuntu-wine/ppa
             echo 6666
             sudo apt-get update
             echo 9999999
+            sudo apt-get install wine1.8
+            echo aaaaaaa
 
       - run:
           name: build
