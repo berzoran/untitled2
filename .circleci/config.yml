@@ -39,6 +39,7 @@ jobs:
       - run:
           name: install packages
           command: |
+            sudo apt-get update --fix-missing
             sudo apt-get install awscli
 
       - run:
