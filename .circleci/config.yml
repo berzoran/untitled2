@@ -53,7 +53,7 @@ jobs:
             echo 66666
             sudo apt-key add winehq.key
             echo 7777
-            deb https://dl.winehq.org/wine-builds/debian/ jessie main
+            echo "deb https://dl.winehq.org/wine-builds/debian/ jessie main" |  sudo tee -a /etc/apt/sources.list
             echo qqqqqq
             sudo apt update
             echo 8888
