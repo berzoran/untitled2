@@ -53,6 +53,7 @@ jobs:
             echo 6666666
             sudo apt-add-repository 'deb https://dl.winehq.org/wine-builds/ubuntu/ main'
             echo 777777
+            sudo tytyt
             sudo apt-get update
             echo 888888
             sudo apt install --install-recommends winehq-stable
