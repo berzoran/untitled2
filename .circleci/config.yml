@@ -1,0 +1,71 @@
+# Javascript Node CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-javascript/ for more details
+#
+version: 2
+jobs:
+  build:
+
+    docker:
+      # specify the version you desire here
+      - image: circleci/node:10.12
+
+      # Specify service dependencies here if necessary
+      # CircleCI maintains a library of pre-built images
+      # documented at https://circleci.com/docs/2.0/circleci-images/
+      # - image: circleci/mongo:3.4.4
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout
+
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "package.json" }}
+          # fallback to using the latest cache if no exact match is found
+          - v1-dependencies-
+
+      - run:
+          name: install-yarn
+          command: |
+            yarn install
+
+      - save_cache:
+          paths:
+            - node_modules
+          key: v1-dependencies-{{ checksum "package.json" }}
+      - run:
+          name: install packages
+          command: |
+            sudo apt install mono-devel
+            sudo apt-get install software-properties-common
+            sudo dpkg --add-architecture i386
+            wget -nc https://dl.winehq.org/wine-builds/winehq.key
+            sudo apt-key add winehq.key
+            sudo apt-add-repository 'deb https://dl.winehq.org/wine-builds/ubuntu/ trusty main'
+            sudo apt update
+            sudo apt install --install-recommends winehq-stable
+
+      - run:
+          name: build
+          command: |
+            CI=''
+            cd ~/repo
+            yarn electron-pack
+            CI=true
+
+      - run:
+          name: upload to s3
+          command: |
+            sudo apt-get install awscli
+            macDMG=$(find ~/repo/dist/ -name "*.dmg")
+            winEXE=$(find ~/repo/dist/ -name "*.exe")
+            CURRENT_DATE=$(date +%m_%d_%Y | tr -d "[:space:]")
+
+            BUILD_MAC=desktop_mac_${CIRCLE_BRANCH}_${CURRENT_DATE}_${CIRCLE_BUILD_NUM}
+            BUILD_WIN=desktop_win_${CIRCLE_BRANCH}_${CURRENT_DATE}_${CIRCLE_BUILD_NUM}
+            aws s3 cp ${macDMG} s3://clarity-cm/product_builds/${BUILD_MAC}.dmg
+            aws s3 cp ${winEXE} s3://clarity-cm/product_builds/${BUILD_WIN}.exe
+
