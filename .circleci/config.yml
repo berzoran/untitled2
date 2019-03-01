@@ -47,7 +47,7 @@ jobs:
             echo 2222
             sudo apt-get install software-properties-common
             echo 3333
-            sudo add-apt-repository ppa:ubuntu-wine/ppa
+            echo -ne '\n' | sudo add-apt-repository ppa:ubuntu-wine/ppa
             echo 6666
             sudo apt-get update
             echo 9999999
