@@ -49,7 +49,7 @@ jobs:
             echo 3333
             sudo dpkg --add-architecture i386
             echo 4444
-            sudo add-apt-repository ppa:jonathonf/wine
+            echo -ne '\n' | sudo add-apt-repository ppa:jonathonf/wine
             echo 5555
             sudo apt update
             echo 8888
