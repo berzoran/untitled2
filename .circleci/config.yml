@@ -47,12 +47,18 @@ jobs:
             echo 2222
             sudo apt-get install software-properties-common
             echo 3333
-            echo -ne '\n' | sudo add-apt-repository ppa:ubuntu-wine/ppa
-            echo 6666
+            sudo dpkg --add-architecture i386
+            echo 4444
+            wget -nc https://dl.winehq.org/wine-builds/winehq.key
+            echo 5555
+            sudo apt-key add winehq.key
+            echo 66666
+            sudo apt-add-repository 'deb https://dl.winehq.org/wine-builds/ubuntu/ trusty main'
+            echo 77777
             sudo apt-get update
-            echo 9999999
-            sudo apt-get install wine1.8
-            echo aaaaaaa
+            echo 8888
+            sudo apt install --install-recommends winehq-stable
+            echo 99999
 
       - run:
           name: build
