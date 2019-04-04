@@ -1,64 +1,141 @@
-# Javascript Node CircleCI 2.0 configuration file
+# Python CircleCI 2.0 configuration file
 #
-# Check https://circleci.com/docs/2.0/language-javascript/ for more details
+# Check https://circleci.com/docs/2.0/language-python/ for more details
 #
 version: 2
 jobs:
   build:
-
+    environment:
+      - VENV: "venv"
     docker:
       # specify the version you desire here
-      - image: circleci/node:10.12
+      # use `-browsers` prefix for selenium tests, e.g. `3.6.1-browsers`
+      - image: circleci/python:3.6.1
 
       # Specify service dependencies here if necessary
       # CircleCI maintains a library of pre-built images
       # documented at https://circleci.com/docs/2.0/circleci-images/
-      # - image: circleci/mongo:3.4.4
+      # - image: circleci/postgres:9.4
 
     working_directory: ~/repo
 
     steps:
       - checkout
 
-      # Download and cache dependencies
       - restore_cache:
           keys:
-          - v1-dependencies-{{ checksum "package.json" }}
+          - v1-dependencies-{{ checksum "requirements.txt" }}
           # fallback to using the latest cache if no exact match is found
           - v1-dependencies-
 
       - run:
-          name: install-yarn
+          name: get ground truth data
           command: |
-            yarn install
+            git clone git@bitbucket.org:claritysurgical/ground_truth.git /home/circleci/ground_truth/
+            mv /home/circleci/ground_truth/GroundTruthData /home/circleci/repo/Ceevra/Testing/
+
+      - run:
+          name: install dependencies
+          command: |
+            sudo apt-get update
+            python3 -m venv ${VENV}
+            . ${VENV}/bin/activate
+            pip install -r requirements-test.txt
+            pip install pylint
+            sudo pip install awscli
+            sudo apt-get install libglu1
+            sudo apt-get install xpra
+
+      - run:
+          name: run pylint
+          command: |
+            . ${VENV}/bin/activate
+            sh ./check.sh ${VENV}
 
       - save_cache:
           paths:
-            - node_modules
-          key: v1-dependencies-{{ checksum "package.json" }}
-      - run:
-          name: install packages
-          command: |
-            sudo apt-get update --fix-missing
-            sudo apt-get install awscli
+            - . ${VENV}
+          key: v1-dependencies-{{ checksum "requirements-test.txt" }}
+
+      - store_artifacts:
+          path: ./dist/pylintout
+          destination: pylint
 
       - run:
-          name: build
+          name: get_slicer
           command: |
-            CI=''
-            cd ~/repo
-            yarn electron-pack
-            CI=true
+            mkdir /home/circleci/slicer_download
+            mkdir /home/circleci/slicer
+            mkdir /home/circleci/vmtk
+            aws s3 cp s3://clarity-cm/3rd_party/logstash.tar.gz /home/circleci/slicer_download/
+            curl -o /home/circleci/slicer_download/Slicer-4.10.0.tar.gz http://slicer.kitware.com/midas3/download/?items=390420,1
+            aws s3 cp s3://clarity-cm/3rd_party/27501-linux-amd64-SlicerVMTK.tar.gz /home/circleci/vmtk
+            tar -xf /home/circleci/vmtk/27501-linux-amd64-SlicerVMTK.tar.gz -C /home/circleci/vmtk/
+            mv /home/circleci/vmtk/27501-linux-amd64-SlicerVMTK /home/circleci/vmtk/SlicerVMTK
+            tar -xf /home/circleci/slicer_download/Slicer-4.10.0.tar.gz -C /home/circleci/slicer
+            mkdir -p /home/circleci/repo/Ceevra/Testing/Python/Output
+
+      - run:
+          name: install slicer dependencies
+          command:
+            /home/circleci/repo/install_requirements.sh /home/circleci/slicer/Slicer-4.10.0-linux-amd64/bin/PythonSlicer
+
+      - run:
+          name: get data files
+          command:
+            aws s3 cp s3://clarity-cm/Slicer-test/Output /home/circleci/repo/Ceevra/Testing/Python/Output/ --recursive
+
+            aws s3 cp s3://clarity-cm/Slicer-test/Volumes/Volumes.tar.gz /home/circleci/slicer/
+
+            tar -xf /home/circleci/slicer/Volumes.tar.gz -C /home/circleci/repo/Ceevra/Testing/VolTestData/ --strip-components=1
+
+            mkdir -p /home/circleci/repo/Ceevra/Testing/VolTestData/TestVolumes/CeevraVesselCenterlines
+            mkdir -p /home/circleci/repo/Ceevra/Testing/VolTestData/TestVolumes/CeevraVesselGrow
+            mkdir -p /home/circleci/repo/Ceevra/Testing/VolTestData/TestVolumes/CeevraFloodFill
+            mkdir -p /home/circleci/repo/Ceevra/Testing/Python/Output/CeevraVesselCenterlines
+            mkdir -p /home/circleci/repo/Ceevra/Testing/Python/Output/CeevraVesselGrow
+            mkdir -p /home/circleci/repo/Ceevra/Testing/Python/Output/CeevraFloodFill
+
+      - run:
+          name: test segmentation
+          command: |
+            LD_LIBRARY_PATH=/home/circleci/vmtk/SlicerVMTK/lib/Slicer-4.10/qt-loadable-modules:/home/circleci/vmtk/SlicerVMTK/lib/Slicer-4.10/qt-scripted-modules:/home/circleci/vmtk/SlicerVMTK/lib/Slicer-4.10
+            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH
+            . ${VENV}/bin/activate
+            sed -i 's/RUN_TEST = False/RUN_TEST = True/' /home/circleci//repo/Ceevra/Testing/Python/testSettings.py
+            xpra start :11 && sleep 3 && DISPLAY=:11 /home/circleci/slicer/Slicer-4.10.0-linux-amd64/Slicer --additional-module-paths \
+            /home/circleci/vmtk/SlicerVMTK/lib/Slicer-4.10/qt-loadable-modules \
+            /home/circleci/vmtk/SlicerVMTK/lib/Slicer-4.10/qt-scripted-modules \
+            /home/circleci/repo/CeevraVesselCenterlines \
+            /home/circleci/repo/CeevraFloodFill \
+            /home/circleci/repo/CeevraShapeFill \
+            /home/circleci/repo/CeevraSegmentFinalizer \
+            /home/circleci/repo/CeevraRegionGrow \
+            /home/circleci/repo/CeevraFastVesselGrow \
+            /home/circleci/repo/Ceevra \
+            --python-script /home/circleci/repo/Ceevra/Testing/Python/RunTests.py
+            pytest /home/circleci/repo/Ceevra/Testing/Python/TestSegmentComparison.py --runFull False --junitxml="./test-reports/report.xml"
+            sed -i 's/RUN_TEST = True/RUN_TEST = False/' /home/circleci//repo/Ceevra/Testing/Python/testSettings.py
+
+      - run:
+          name: put data files
+          command:
+            aws s3 cp /home/circleci/repo/Ceevra/Testing/Python/Output/ s3://clarity-cm/Slicer-test/Output --recursive
+
+            mkdir -p /home/circleci/segmentation_output/
+
+      - run:
+          name: build distribution
+          environment:
+          command: |
+            tar cfz ./dist/llz-segmenter.tar.gz --exclude='*.tar.gz' --exclude=${VENV} --exclude='_pycache_' --exclude='GroundTruthData' --exclude='VolTestData' --exclude='dist' *
 
       - run:
           name: upload to s3
           command: |
-            sudo apt-get install awscli
-            macDMG=$(find ~/repo/dist/ -name "*.dmg")
-            winEXE=$(find ~/repo/dist/ -name "*.exe")
             CURRENT_DATE=$(date +%m_%d_%Y | tr -d "[:space:]")
+            BUILD_NAME=segmenter_${CIRCLE_BRANCH}_${CURRENT_DATE}_${CIRCLE_BUILD_NUM}
+            aws s3 cp /home/circleci/repo/dist/llz-segmenter.tar.gz s3://clarity-cm/product_builds/${BUILD_NAME}.tar.gz
 
-            BUILD_MAC=desktop_mac_${CIRCLE_BRANCH}_${CURRENT_DATE}_${CIRCLE_BUILD_NUM}
-            BUILD_WIN=desktop_win_${CIRCLE_BRANCH}_${CURRENT_DATE}_${CIRCLE_BUILD_NUM}
-            aws s3 cp ${macDMG} s3://clarity-cm/product_builds/${BUILD_MAC}.dmg
-            aws s3 cp ${winEXE} s3://clarity-cm/product_builds/${BUILD_WIN}.exe
+      - store_test_results:
+          path: test-reports
