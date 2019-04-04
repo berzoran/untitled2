@@ -22,18 +22,6 @@ jobs:
     steps:
       - checkout
 
-      - restore_cache:
-          keys:
-          - v1-dependencies-{{ checksum "requirements.txt" }}
-          # fallback to using the latest cache if no exact match is found
-          - v1-dependencies-
-
-      - run:
-          name: get ground truth data
-          command: |
-            git clone git@bitbucket.org:claritysurgical/ground_truth.git /home/circleci/ground_truth/
-            mv /home/circleci/ground_truth/GroundTruthData /home/circleci/repo/Ceevra/Testing/
-
       - run:
           name: install dependencies
           command: |
